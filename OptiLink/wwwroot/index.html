@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OptiLink Dashboard</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.js"></script>
+    <title>OptiLink Dashboard - Ubuntu LTS Status</title>
     <style>
         :root {
             --bg-dark: #09090b;
@@ -15,12 +14,13 @@
             --accent-green: #10b981;
             --accent-red: #ef4444;
             --accent-yellow: #f59e0b;
+            --terminal-bg: #000000;
         }
 
         body {
             margin: 0;
             padding: 20px;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Segoe UI', Roboto, 'Courier New', monospace;
             background-color: var(--bg-dark);
             color: var(--text-light);
             height: 100vh;
@@ -49,6 +49,7 @@
             font-weight: 700;
             letter-spacing: 1px;
             color: var(--text-light);
+            font-family: monospace;
         }
 
         .header-controls {
@@ -59,7 +60,9 @@
 
         .status-badge {
             font-size: 0.8rem;
-            color: var(--accent-green);
+            font-weight: bold;
+            /* Cor amarela para indicar atividade/recuperação */
+            color: var(--accent-yellow); 
             display: flex;
             align-items: center;
             gap: 6px;
@@ -68,33 +71,31 @@
         .status-dot {
             width: 8px;
             height: 8px;
-            background-color: var(--accent-green);
+            background-color: var(--accent-yellow);
             border-radius: 50%;
-            box-shadow: 0 0 8px var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-yellow);
+            animation: pulse 1.5s infinite;
         }
 
-        /* Backup Button */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* Backup Button (Estático para o print) */
         .btn-backup {
-            background: #059669; 
-            color: white; 
-            border: none; 
-            padding: 6px 16px; 
-            border-radius: 6px; 
-            cursor: pointer; 
+            background: var(--surface-dark);
+            color: var(--text-dim);
+            border: 1px solid var(--border-dark);
+            padding: 6px 16px;
+            border-radius: 4px;
             font-weight: 600;
             font-size: 0.85rem;
-            transition: background 0.2s;
             display: flex;
             align-items: center;
             gap: 6px;
-        }
-
-        .btn-backup:hover {
-            background: #047857;
-        }
-
-        .btn-backup:active {
-            transform: scale(0.98);
+            cursor: not-allowed;
         }
 
         /* Stats Grid (Top) */
@@ -107,7 +108,7 @@
         .card {
             background-color: var(--surface-dark);
             border: 1px solid var(--border-dark);
-            border-radius: 12px;
+            border-radius: 8px;
             padding: 20px;
             display: flex;
             flex-direction: column;
@@ -127,7 +128,10 @@
             font-weight: 700;
             font-family: monospace;
             line-height: 1;
+            color: var(--accent-yellow); /* Amarelo para indicar carga alta */
         }
+        
+        .card-value.normal { color: var(--text-light); }
 
         .card-unit {
             font-size: 1rem;
@@ -144,17 +148,43 @@
         /* Main Content Split */
         .main-split {
             display: grid;
-            grid-template-columns: 3fr 1fr;
+            grid-template-columns: 2fr 1fr; /* Mais espaço para o log */
             gap: 16px;
             height: 100%;
+            min-height: 0; /* Importante para o scroll funcionar */
         }
 
+        /* TERMINAL LOG AREA */
         .timeline-area {
-            background-color: var(--surface-dark);
+            background-color: var(--terminal-bg);
             border: 1px solid var(--border-dark);
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow: hidden;
         }
+
+        .log-container {
+            overflow-y: auto;
+            height: 100%;
+            display: flex;
+            flex-direction: column-reverse; /* Logs mais novos embaixo, estilo terminal */
+        }
+
+        .log-entry {
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+        
+        .timestamp { color: #555; margin-right: 10px; }
+        .log-sys { color: var(--text-dim); }
+        .log-warn { color: var(--accent-yellow); font-weight: bold; }
+        .log-err { color: var(--accent-red); font-weight: bold; }
+        .log-ok { color: var(--accent-green); font-weight: bold; }
+        .log-io { color: #3b82f6; } /* Azul para I/O */
 
         .sidebar {
             display: flex;
@@ -165,22 +195,26 @@
         .sidebar-card {
             background-color: var(--surface-dark);
             border: 1px solid var(--border-dark);
-            border-radius: 12px;
+            border-radius: 8px;
             padding: 20px;
             flex: 1;
+            display: flex;
+            flex-direction: column;
         }
 
         .health-score {
             font-size: 4rem;
-            color: var(--accent-green);
+            color: var(--accent-yellow); /* Amarelo porque acabou de recuperar */
             text-align: center;
             font-weight: bold;
         }
 
         .health-label {
             text-align: center;
-            color: var(--text-dim);
+            color: var(--accent-yellow);
             font-size: 0.9rem;
+            font-weight: bold;
+            letter-spacing: 1px;
         }
 
     </style>
@@ -189,72 +223,84 @@
 
     <div class="container">
         <div class="header">
-            <div class="title">OPTILINK // OPTIPLEX 7020</div>
+            <div class="title">OPTILINK // UBUNTU 22.04 LTS SERVER</div>
             
             <div class="header-controls">
-                <button id="backupBtn" class="btn-backup" onclick="triggerBackup()">
-                    <span>⚠️</span> BACKUP
+                <button class="btn-backup">
+                    <span>⚠️</span> BACKUP (BUSY)
                 </button>
 
                 <div class="status-badge">
-                    <span class="status-dot"></span>ONLINE
+                    <span class="status-dot"></span>HEALING ACTIVE
                 </div>
             </div>
         </div>
 
         <div class="stats-grid">
             <div class="card">
-                <div class="card-label">CPU LOAD</div>
+                <div class="card-label">CPU LOAD (AVG)</div>
                 <div>
-                    <span id="cpuValue" class="card-value">--</span>
+                    <span class="card-value">4.12</span>
                 </div>
-                <div class="card-subtext">Carga Sustentada</div>
+                <div class="card-subtext" style="color: var(--accent-yellow)">Carga Elevada</div>
             </div>
             <div class="card">
                 <div class="card-label">TÉRMICA</div>
                 <div>
-                    <span class="card-value">--</span><span class="card-unit">°C</span>
+                    <span class="card-value normal">58</span><span class="card-unit">°C</span>
                 </div>
-                <div class="card-subtext">Normal</div>
+                <div class="card-subtext">Aquecendo</div>
             </div>
             <div class="card">
                 <div class="card-label">RAM ATIVA</div>
                 <div>
-                    <span id="ramValue" class="card-value">--</span><span class="card-unit">GB</span>
+                    <span class="card-value normal">12.4</span><span class="card-unit">GB</span>
                 </div>
-                <div id="ramPercent" class="card-subtext">--% uso</div>
+                <div class="card-subtext">78% uso (Processando)</div>
             </div>
             <div class="card">
-                <div class="card-label">DISK I/O</div>
+                <div class="card-label">DISK I/O WRITE</div>
                 <div>
-                    <span id="diskValue" class="card-value">0.0</span><span class="card-unit">MB</span>
+                    <span class="card-value">185.2</span><span class="card-unit">MB/s</span>
                 </div>
-                <div class="card-subtext">Ocioso</div>
+                <div class="card-subtext" style="color: var(--accent-yellow)">Gravação Intensa</div>
             </div>
         </div>
 
         <div class="main-split">
             <div class="timeline-area">
-                <div class="card-label">LINHA DO TEMPO</div>
-                </div>
+                <div class="card-label" style="margin-bottom: 10px;">SYSTEM EVENT LOG & WATCHDOG ACTIVITY</div>
+                <div class="log-container" id="logTerminal">
+                    </div>
+            </div>
 
             <div class="sidebar">
                 <div class="sidebar-card">
-                    <div class="card-label">RECURSOS</div>
-                    <div style="margin-top: 10px; color: var(--text-dim); font-size: 0.9rem;">
-                        <div>Down <span style="float:right; color: var(--accent-green);">↓ 2.1</span></div>
-                        <div>Up <span style="float:right; color: var(--accent-yellow);">↑ 2.6</span></div>
+                    <div class="card-label">CONTAINER STATUS</div>
+                    <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px; font-size: 0.9rem;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>optilink-backend</span><span style="color: var(--accent-green)">● RUNNING</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>paperless-webserver</span><span style="color: var(--accent-yellow)">● STARTING</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>postgres-db</span><span style="color: var(--accent-green)">● RUNNING</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>redis-broker</span><span style="color: var(--accent-green)">● RUNNING</span>
+                        </div>
                     </div>
                 </div>
 
                 <div class="sidebar-card">
                     <div class="card-label">ÍNDICE DE SAÚDE</div>
                     <div style="display: flex; flex-direction: column; justify-content: center; height: 100%;">
-                        <div class="health-score">92</div>
-                        <div class="health-label">EXCELENTE</div>
+                        <div class="health-score">78</div>
+                        <div class="health-label">RECUPERANDO...</div>
                     </div>
-                    <div style="font-size: 0.7rem; color: var(--text-dim); text-align: right; margin-top: auto;">
-                        BOOT: 04/02 19:05
+                    <div style="font-size: 0.7rem; color: var(--text-dim); text-align: center; margin-top: auto;">
+                        Último incidente: 26s atrás
                     </div>
                 </div>
             </div>
@@ -262,59 +308,34 @@
     </div>
 
     <script>
-        // 1. Configuração do SignalR (Conexão com o Backend)
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/dashboardHub")
-            .build();
+        // Simulação de eventos dramáticos para o print
+        const fakeEvents = [
+            { t: "10:45:01", msg: "[KERNEL] Linux 5.15.0-76-generic (Ubuntu LTS) kernel initialized.", type: "log-sys" },
+            { t: "10:45:05", msg: "[SYSTEM] OptiLink Core middleware services starting...", type: "log-sys" },
+            { t: "10:45:08", msg: "[DOCKER] Connecting to docker.sock... OK.", type: "log-sys" },
+            { t: "10:45:10", msg: "[WATCHDOG] Service monitoring initiated for 5 containers.", type: "log-ok" },
+            { t: "10:46:32", msg: "--- MARK ---", type: "log-sys" },
+            { t: "10:47:15", msg: "[ALERT] Container 'paperless-webserver' exited unexpectedly with code 137 (OOM Killed).", type: "log-err" },
+            { t: "10:47:15", msg: "[WATCHDOG] CRITICAL: Service detected DOWN. Initiating SELF-HEALING sequence.", type: "log-warn" },
+            { t: "10:47:16", msg: "[DOCKER] Executing: docker restart paperless-webserver", type: "log-warn" },
+            { t: "10:47:21", msg: "[WATCHDOG] SUCCESS: 'paperless-webserver' is responding to health checks. System recovered.", type: "log-ok" },
+            { t: "10:47:45", msg: "[PAPERLESS] Detecção de arquivo: 'Contrato_Scan_A4_2023.pdf' (15.4 MB) na pasta de consumo.", type: "log-io" },
+            { t: "10:47:46", msg: "[PAPERLESS] Iniciando OCR e indexação. Carga de CPU elevada.", type: "log-warn" },
+            { t: "10:47:50", msg: "[SYSTEM] Sincronizando estados... Telemetria ativa.", type: "log-sys" }
+            // O último log aparece no topo da lista
+        ];
 
-        // 2. Recebendo atualizações do servidor
-        connection.on("ReceiveStats", (stats) => {
-            document.getElementById("cpuValue").innerText = stats.cpuLoad;
-            document.getElementById("ramValue").innerText = stats.ramUsedGb;
-            document.getElementById("ramPercent").innerText = stats.memoryPercent + "% uso";
-            
-            // Soma simples de leitura+escrita para demo
-            const diskTotal = (parseFloat(stats.diskReadMb) + parseFloat(stats.diskWriteMb)).toFixed(1);
-            document.getElementById("diskValue").innerText = diskTotal;
+        const logContainer = document.getElementById('logTerminal');
+
+        // Renderiza os logs de baixo para cima (estilo terminal)
+        fakeEvents.forEach(event => {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="timestamp">[${event.t}]</span><span class="${event.type}">${event.msg}</span>`;
+            logContainer.prepend(entry); // Adiciona no topo (já que o container é column-reverse)
         });
 
-        connection.start().catch(err => console.error(err));
-
-        // 3. Lógica do Botão de Backup
-        async function triggerBackup() {
-            const btn = document.getElementById('backupBtn');
-            const originalText = btn.innerHTML;
-            
-            try {
-                // Feedback visual de carregamento
-                btn.innerHTML = "⏳ INICIANDO...";
-                btn.style.background = "#ca8a04"; // Amarelo escuro
-                
-                // Chamada para a API
-                const response = await fetch('/api/backup/trigger', { method: 'POST' });
-                const data = await response.json();
-                
-                console.log("Resposta do Server:", data);
-                
-                if(response.ok) {
-                    btn.innerHTML = "✅ SUCESSO";
-                    btn.style.background = "#059669"; // Verde volta ao normal
-                    // Volta ao texto original depois de 3 segundos
-                    setTimeout(() => {
-                        btn.innerHTML = "⚠️ BACKUP";
-                    }, 3000);
-                } else {
-                    btn.innerHTML = "❌ ERRO";
-                    btn.style.background = "#ef4444"; // Vermelho
-                    alert("Erro do Servidor: " + JSON.stringify(data));
-                }
-            } catch (e) {
-                console.error(e);
-                btn.innerHTML = "❌ FALHA";
-                btn.style.background = "#ef4444";
-                alert("Não foi possível conectar ao servidor.");
-            }
-        }
     </script>
 </body>
 </html>
+
