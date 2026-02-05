@@ -1,0 +1,38 @@
+services:
+  # 1. O Banco de Dados de Tarefas (Redis)
+  broker:
+    image: redis:7
+    restart: always
+    volumes:
+      - redisdata:/data
+
+  # 2. O Arquivo Digital (Paperless-ngx)
+  webserver:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    restart: always
+    depends_on:
+      - broker
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mapeia pastas locais para dentro do container
+      - ./paperless/data:/usr/src/paperless/data
+      - ./paperless/media:/usr/src/paperless/media
+      - ./paperless/export:/usr/src/paperless/export
+      - ./paperless/consume:/usr/src/paperless/consume
+    environment:
+      USERMAP_UID: 1000
+      USERMAP_GID: 1000
+      PAPERLESS_REDIS: redis://broker:6379
+      PAPERLESS_TIME_ZONE: "America/Sao_Paulo"
+      
+      # --- CORREÇÃO AQUI ---
+      PAPERLESS_OCR_LANGUAGE: por   # Define o padrão como PT-BR
+      PAPERLESS_OCR_LANGUAGES: por  # Força o download do pacote PT-BR
+      # ---------------------
+      
+      PAPERLESS_SECRET_KEY: "change-me-to-something-secure-later"
+      PAPERLESS_URL: "http://localhost:8000"
+
+volumes:
+  redisdata:

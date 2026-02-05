@@ -1,0 +1,19 @@
+# .NET Build Artifacts
+[Bb]in/
+[Oo]bj/
+.vs/
+.vscode/
+*.user
+*.db-shm
+*.db-wal
+optilink.db
+
+# Docker & Infrastructure
+paperless/data/
+paperless/media/
+paperless/consume/
+paperless/export/
+
+# Backups and Logs
+*.zip
+*.log

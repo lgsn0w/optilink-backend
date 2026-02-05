@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OptiLink Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.js"></script>
+    <style>
+        :root {
+            --bg-dark: #09090b;
+            --surface-dark: #18181b;
+            --border-dark: #27272a;
+            --text-dim: #71717a;
+            --text-light: #f4f4f5;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        /* Layout Grid */
+        .container {
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            gap: 20px;
+            height: 100%;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-dark);
+        }
+
+        .title {
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--text-light);
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .status-badge {
+            font-size: 0.8rem;
+            color: var(--accent-green);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--accent-green);
+        }
+
+        /* Backup Button */
+        .btn-backup {
+            background: #059669; 
+            color: white; 
+            border: none; 
+            padding: 6px 16px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-backup:hover {
+            background: #047857;
+        }
+
+        .btn-backup:active {
+            transform: scale(0.98);
+        }
+
+        /* Stats Grid (Top) */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .card {
+            background-color: var(--surface-dark);
+            border: 1px solid var(--border-dark);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 110px;
+        }
+
+        .card-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+
+        .card-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-family: monospace;
+            line-height: 1;
+        }
+
+        .card-unit {
+            font-size: 1rem;
+            color: var(--text-dim);
+            margin-left: 4px;
+        }
+
+        .card-subtext {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        /* Main Content Split */
+        .main-split {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 16px;
+            height: 100%;
+        }
+
+        .timeline-area {
+            background-color: var(--surface-dark);
+            border: 1px solid var(--border-dark);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .sidebar-card {
+            background-color: var(--surface-dark);
+            border: 1px solid var(--border-dark);
+            border-radius: 12px;
+            padding: 20px;
+            flex: 1;
+        }
+
+        .health-score {
+            font-size: 4rem;
+            color: var(--accent-green);
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .health-label {
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <div class="title">OPTILINK // OPTIPLEX 7020</div>
+            
+            <div class="header-controls">
+                <button id="backupBtn" class="btn-backup" onclick="triggerBackup()">
+                    <span>⚠️</span> BACKUP
+                </button>
+
+                <div class="status-badge">
+                    <span class="status-dot"></span>ONLINE
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="card">
+                <div class="card-label">CPU LOAD</div>
+                <div>
+                    <span id="cpuValue" class="card-value">--</span>
+                </div>
+                <div class="card-subtext">Carga Sustentada</div>
+            </div>
+            <div class="card">
+                <div class="card-label">TÉRMICA</div>
+                <div>
+                    <span class="card-value">--</span><span class="card-unit">°C</span>
+                </div>
+                <div class="card-subtext">Normal</div>
+            </div>
+            <div class="card">
+                <div class="card-label">RAM ATIVA</div>
+                <div>
+                    <span id="ramValue" class="card-value">--</span><span class="card-unit">GB</span>
+                </div>
+                <div id="ramPercent" class="card-subtext">--% uso</div>
+            </div>
+            <div class="card">
+                <div class="card-label">DISK I/O</div>
+                <div>
+                    <span id="diskValue" class="card-value">0.0</span><span class="card-unit">MB</span>
+                </div>
+                <div class="card-subtext">Ocioso</div>
+            </div>
+        </div>
+
+        <div class="main-split">
+            <div class="timeline-area">
+                <div class="card-label">LINHA DO TEMPO</div>
+                </div>
+
+            <div class="sidebar">
+                <div class="sidebar-card">
+                    <div class="card-label">RECURSOS</div>
+                    <div style="margin-top: 10px; color: var(--text-dim); font-size: 0.9rem;">
+                        <div>Down <span style="float:right; color: var(--accent-green);">↓ 2.1</span></div>
+                        <div>Up <span style="float:right; color: var(--accent-yellow);">↑ 2.6</span></div>
+                    </div>
+                </div>
+
+                <div class="sidebar-card">
+                    <div class="card-label">ÍNDICE DE SAÚDE</div>
+                    <div style="display: flex; flex-direction: column; justify-content: center; height: 100%;">
+                        <div class="health-score">92</div>
+                        <div class="health-label">EXCELENTE</div>
+                    </div>
+                    <div style="font-size: 0.7rem; color: var(--text-dim); text-align: right; margin-top: auto;">
+                        BOOT: 04/02 19:05
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. Configuração do SignalR (Conexão com o Backend)
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/dashboardHub")
+            .build();
+
+        // 2. Recebendo atualizações do servidor
+        connection.on("ReceiveStats", (stats) => {
+            document.getElementById("cpuValue").innerText = stats.cpuLoad;
+            document.getElementById("ramValue").innerText = stats.ramUsedGb;
+            document.getElementById("ramPercent").innerText = stats.memoryPercent + "% uso";
+            
+            // Soma simples de leitura+escrita para demo
+            const diskTotal = (parseFloat(stats.diskReadMb) + parseFloat(stats.diskWriteMb)).toFixed(1);
+            document.getElementById("diskValue").innerText = diskTotal;
+        });
+
+        connection.start().catch(err => console.error(err));
+
+        // 3. Lógica do Botão de Backup
+        async function triggerBackup() {
+            const btn = document.getElementById('backupBtn');
+            const originalText = btn.innerHTML;
+            
+            try {
+                // Feedback visual de carregamento
+                btn.innerHTML = "⏳ INICIANDO...";
+                btn.style.background = "#ca8a04"; // Amarelo escuro
+                
+                // Chamada para a API
+                const response = await fetch('/api/backup/trigger', { method: 'POST' });
+                const data = await response.json();
+                
+                console.log("Resposta do Server:", data);
+                
+                if(response.ok) {
+                    btn.innerHTML = "✅ SUCESSO";
+                    btn.style.background = "#059669"; // Verde volta ao normal
+                    // Volta ao texto original depois de 3 segundos
+                    setTimeout(() => {
+                        btn.innerHTML = "⚠️ BACKUP";
+                    }, 3000);
+                } else {
+                    btn.innerHTML = "❌ ERRO";
+                    btn.style.background = "#ef4444"; // Vermelho
+                    alert("Erro do Servidor: " + JSON.stringify(data));
+                }
+            } catch (e) {
+                console.error(e);
+                btn.innerHTML = "❌ FALHA";
+                btn.style.background = "#ef4444";
+                alert("Não foi possível conectar ao servidor.");
+            }
+        }
+    </script>
+</body>
+</html>
