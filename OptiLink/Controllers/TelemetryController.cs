@@ -20,7 +20,7 @@ public class TelemetryController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> PostTelemetry([FromBody] DeviceData data)
     {
-        // [DEBUG] Print to the Arch Terminal
+        // [DEBUG] Print Terminal
         Console.WriteLine($"[DEBUG] SIGNAL RECEIVED: {data.DeviceId} | Battery: {data.BatteryLevel}%");
         
         await _hub.Clients.All.SendAsync("ReceiveTelemetry", data);
