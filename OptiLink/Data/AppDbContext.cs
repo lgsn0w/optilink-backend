@@ -12,7 +12,6 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<CpuMetric>().HasKey(m => m.Id);
-        // Index the timestamp so graphs load instantly
         modelBuilder.Entity<CpuMetric>().HasIndex(m => m.Timestamp); 
     }
 }
