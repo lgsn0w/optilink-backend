@@ -41,7 +41,6 @@ App mobile pra upload de arquivos a caminho
 ### Dashboard Web "Matrix"
 *Monitoramento em tempo real de CPU, RAM e status dos serviços.*
 ![Dashboard](wwwroot/dashboard_preview.png)
-*(Nota: Se você tiver salvo o print, coloque o arquivo na pasta wwwroot e ajuste o nome aqui)*
 
 ---
 
