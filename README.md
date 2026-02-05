@@ -5,7 +5,7 @@
   <h3>Controle e Telemetria para Home Lab (OptiPlex 7020)</h3>
 
   <p>
-    <img src="https://img.shields.io/badge/OS-Arch_Linux-1793d1?style=for-the-badge&logo=archlinux&logoColor=white" alt="Arch Linux">
+    <img src="https://img.shields.io/badge/OS-Ubuntu_Server_LTS-E95420?style=for-the-badge&logo=ubuntu&logoColor=white" alt="Ubuntu Server LTS">
     <img src="https://img.shields.io/badge/.NET-10.0_Preview-512bd4?style=for-the-badge&logo=dotnet&logoColor=white" alt=".NET 10">
     <img src="https://img.shields.io/badge/Container-Docker-2496ed?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
     <img src="https://img.shields.io/badge/Realtime-SignalR-lightgrey?style=for-the-badge&logo=signalr" alt="SignalR">
